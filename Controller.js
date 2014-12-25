@@ -1,11 +1,14 @@
 /**
  * Created by HeavenVolkoff on 12/22/14.
  */
+var util = require('util');
+var async = require('async');
 var Client = require('./Client');
 var basicFunc = require('./basicFunction');
 var request = require("request");
 var url = require('url');
 var parseString = require('xml2js').parseString;
+var cheerio = require('cheerio');
 
 module.exports = Controller;
 
@@ -192,22 +195,117 @@ Controller.prototype.processURL = function makeProcessURL(processNumber){
     return this.client.link.process + 'NumProc=' + processNumber.toString();
 };
 
+Controller.prototype._MostraPeca = function _MostraPeca( P1, P2, P3, DTI, NPI, NPT, TI, NV) {
+    'use strict';
+
+    return this.client.link.showFile + 'P1='+P1+'&P2='+P2+'&P3='+P3+'&DTI='+DTI+'&NPI='+NPI+'&NPT='+NPT+'&TI='+TI+'&NV='+NV;
+};
+
+Controller.prototype.requestPiece = function requestPiece(url, callback){
+    "use strict";
+
+    var self = this;
+    var $ = null;
+    var host = url.parse(url);
+    var pieceUrl = null;
+
+    request({
+            url: host,
+            method: "GET",
+            jar: self.client.cookieJar
+        },
+        function(error, response, body) {
+            if(!error){
+                $ = cheerio.load(body);
+                host = $('head meta').attr('url');
+            }else{
+                callback(error);
+            }
+        }
+    );
+
+    async.whilst(
+        function(){
+            return !pieceUrl;
+        },
+        function(callback){
+            request({
+                    url: host,
+                    method: "GET",
+                    jar: self.client.cookieJar
+                },
+                function(error, response, body) {
+                    if(!error){
+                        $ = cheerio.load(body);
+                        pieceUrl = $('iframe').attr('src');
+                    }else{
+                        callback(error);
+                    }
+                }
+            );
+        },
+        function(error){
+            if(!error){
+                callback(null, pieceUrl);
+            }else{
+                callback(error);
+            }
+        }
+    );
+};
+
 Controller.prototype.requestProcessInfo = function requestProcessInfo(processNumber, callback){
     "use strict";
 
     var self = this;
 
     if(!self.client.connected){
-        self.client.emit('error', new Error('Not Logged In'));
+        callback(new Error('Not Logged In'));
         return;
     }
 
-    var host = typeof processNumber === 'object' && processNumber.hasOwnProperty('host')? processNumber : typeof processNumber === 'string'? url.parse(self.processURL(processNumber)) : null;
+    var host = url.parse(self.processURL(processNumber));
+    var $ = null;
 
-    if(!host){
-        self.emit('error', new Error('Invalid Process Number'));
-        return;
-    }
+    async.waterfall(
+        [
+            function(callback){
+                request(
+                    {
+                        url: host,
+                        method: "GET",
+                        jar: self.client.cookieJar
+                    },
+                    callback
+                );
+            },
+            function(response, body, callback){
+                    $ = cheerio.load(body);
+                var processCode = $('#Procs').children('option').val();
+                var query = {
+                    NumProc: '',
+                    CodDoc: processCode,
+                    CodUsuWeb: 260,
+                    CodMotiv: 123,
+                    Confir: 'true'
+                };
+
+                basicFunc.makeQuery(query, callback);
+            },
+            function(query, callback){
+                request(
+                    {
+                        url: url.parse(self.client.link.processPieces + query),
+                        method: "GET",
+                        jar: self.client.cookieJar
+                    },
+                    callback);
+            }
+        ],
+        function(error, piecesURL){
+
+        }
+    );
 
     request({
             url: host,
@@ -216,7 +314,47 @@ Controller.prototype.requestProcessInfo = function requestProcessInfo(processNum
         },
         function(error, response, body) {
             if (!error) {
-                console.log(body);
+                request({
+                        url: url.parse(self.client.link.processInfo),
+                        method: "GET",
+                        jar: self.client.cookieJar
+                    },
+                    function(error, response, body) {
+                        if (!error) {
+                            var $ = cheerio.load(body);
+                            var processCode = $('#Procs').children('option').val();
+
+                            var query = {
+                                NumProc: '',
+                                CodDoc: processCode,
+                                CodUsuWeb: 260,
+                                CodMotiv: 123,
+                                Confir: 'true'
+                            };
+
+                            basicFunc.makeQuery(query, function(error, query) {
+                                request({
+                                        url: url.parse(self.client.link.processPieces + query),
+                                        method: "GET",
+                                        jar: self.client.cookieJar
+                                    },
+                                    function (error, response, body) {
+                                        var $ = cheerio.load(body);
+                                        $('.link-under').each(
+                                            function (i, elem) {
+                                                elem = $(this);
+                                                console.log(elem.text());
+                                                var host = url.parse(eval('self._' + elem.attr('href').replace(new RegExp('javascript:', 'g'), "")));
+                                            }
+                                        );
+                                    }
+                                );
+                            });
+                        } else {
+                            callback(error);
+                        }
+                    }
+                );
             } else {
                 callback(error);
             }

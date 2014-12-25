@@ -62,7 +62,10 @@ function Client(username, password){
                 return {
                     login: 'http://procweb.jfrj.jus.br/portal/login.asp',
                     intimation: 'http://procweb.jfrj.jus.br/portal/intimacao/conf_intim_xml.asp?',
-                    process: 'http://procweb.jfrj.jus.br/portal/consulta/cons_procs.asp?'
+                    process: 'http://procweb.jfrj.jus.br/portal/consulta/cons_procs.asp?',
+                    processInfo: 'http://procweb.jfrj.jus.br/portal/consulta/reslistproc.asp',
+                    processPieces: 'http://procweb.jfrj.jus.br/portal/consulta/resinfopecas2.asp?',
+                    showFile: 'http://procweb.jfrj.jus.br/portal/consulta/mostraarquivo.asp?'
                 };
             }
         }
