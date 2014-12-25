@@ -217,7 +217,7 @@ Controller.prototype.requestPiece = function requestPiece(url, callback){
         function(error, response, body) {
             if(!error){
                 $ = cheerio.load(body);
-                host = $('head meta').attr('url');
+                host = url.parse($('head meta').attr('url'));
             }else{
                 callback(error);
             }
@@ -226,7 +226,7 @@ Controller.prototype.requestPiece = function requestPiece(url, callback){
 
     async.whilst(
         function(){
-            return !pieceUrl;
+            return !!pieceUrl;
         },
         function(callback){
             request({
