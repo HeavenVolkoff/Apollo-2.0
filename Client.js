@@ -2,8 +2,6 @@
  * Created by HeavenVolkoff on 12/22/14.
  */
 var basicFunc = require('./basicFunction');
-var EventEmitter = require('events').EventEmitter;
-var util = require('util');
 var request = require("request");
 
 module.exports = Client;
@@ -14,19 +12,17 @@ function Client(username, password){
     var self = this;
     var controller = null;
 
-    EventEmitter.call(this);
-
     if(!(basicFunc.notEmpty(username) && basicFunc.notEmpty(password))){
-        this.emit('error', new Error('Invalid Parameters'));
+        throw new Error('Invalid Parameters');
     }
 
     this.addController = function addController(newController){
         if(!controller && typeof newController === 'object'){
             controller = newController;
         }else if(controller) {
-            this.emit('error',  new Error('Client already has a controller'));
+            throw new Error('Client already has a controller');
         }else{
-            this.emit('error',  new Error('Invalid Controller'));
+            throw new Error('Invalid Controller');
         }
     };
 
@@ -50,7 +46,7 @@ function Client(username, password){
                 if(typeof controller === 'object'){
                     return controller;
                 }else{
-                    self.emit(new Error('Missing Controller'));
+                    throw new Error('Missing Controller');
                 }
             }
         },
@@ -60,8 +56,10 @@ function Client(username, password){
         link: {
             get: function(){
                 return {
+                    home: 'http://procweb.jfrj.jus.br/portal/',
                     login: 'http://procweb.jfrj.jus.br/portal/login.asp',
                     intimation: 'http://procweb.jfrj.jus.br/portal/intimacao/conf_intim_xml.asp?',
+                    consulta: 'http://procweb.jfrj.jus.br/portal/consulta/',
                     process: 'http://procweb.jfrj.jus.br/portal/consulta/cons_procs.asp?',
                     processInfo: 'http://procweb.jfrj.jus.br/portal/consulta/reslistproc.asp',
                     processPieces: 'http://procweb.jfrj.jus.br/portal/consulta/resinfopecas2.asp?',
@@ -71,5 +69,3 @@ function Client(username, password){
         }
     });
 }
-
-util.inherits(Client, EventEmitter);

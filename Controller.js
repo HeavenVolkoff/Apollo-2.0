@@ -1,7 +1,7 @@
 /**
  * Created by HeavenVolkoff on 12/22/14.
  */
-var util = require('util');
+
 var async = require('async');
 var Client = require('./Client');
 var basicFunc = require('./basicFunction');
@@ -145,7 +145,7 @@ Controller.prototype.requestIntimation = function requestIntimationXML(requestOb
     var self = this;
 
     if(!self.client.connected){
-        self.client.emit('error', new Error('Not Logged In'));
+        callback(new Error('Not Logged In'));
         return;
     }
 
@@ -198,16 +198,26 @@ Controller.prototype.processURL = function makeProcessURL(processNumber){
 Controller.prototype._MostraPeca = function _MostraPeca( P1, P2, P3, DTI, NPI, NPT, TI, NV) {
     'use strict';
 
-    return this.client.link.showFile + 'P1='+P1+'&P2='+P2+'&P3='+P3+'&DTI='+DTI+'&NPI='+NPI+'&NPT='+NPT+'&TI='+TI+'&NV='+NV;
+    return{
+        status: true,
+        url: this.client.link.showFile + 'P1='+P1+'&P2='+P2+'&P3='+P3+'&DTI='+DTI+'&NPI='+NPI+'&NPT='+NPT+'&TI='+TI+'&NV='+NV,
+        P1: P1,
+        P2: P2,
+        P3: P3,
+        DTI: DTI,
+        NPI: NPI,
+        NPT: NPT,
+        TI: TI,
+        NV: NV
+    };
 };
 
-Controller.prototype.requestPiece = function requestPiece(url, callback){
+Controller.prototype.requestPiece = function requestPiece(pdf, callback){
     "use strict";
 
     var self = this;
     var $ = null;
-    var host = url.parse(url);
-    var pieceUrl = null;
+    var host = url.parse(pdf.url);
 
     request({
             url: host,
@@ -216,37 +226,81 @@ Controller.prototype.requestPiece = function requestPiece(url, callback){
         },
         function(error, response, body) {
             if(!error){
-                $ = cheerio.load(body);
-                host = url.parse($('head meta').attr('url'));
-            }else{
-                callback(error);
-            }
-        }
-    );
+                    $ = cheerio.load(body);
+                var pdfLink = null;
 
-    async.whilst(
-        function(){
-            return !!pieceUrl;
-        },
-        function(callback){
-            request({
-                    url: host,
-                    method: "GET",
-                    jar: self.client.cookieJar
-                },
-                function(error, response, body) {
-                    if(!error){
-                        $ = cheerio.load(body);
-                        pieceUrl = $('iframe').attr('src');
+                $('iframe').each(
+                    function(i, elem){
+                        var url = $(elem).attr('src');
+                        if(url){
+                            pdfLink = url;
+                            return false;
+                        }
+                    }
+                );
+
+                if(pdfLink){
+                    pdf.url = pdfLink;
+                    callback(null, pdf);
+                }else{
+                    var link = null;
+
+                    $('meta[http-equiv=Refresh]').each(
+                        function(i, elem){
+                            var url = $(elem).attr('content');
+                            if(url){
+                                link = url;
+                                return false;
+                            }
+                        }
+                    );
+
+                    if(link){
+                        async.whilst(
+                            function(){
+                                return !pdfLink;
+                            },
+                            function(callback){
+                                request({
+                                        url: url.parse(link.replace(new RegExp('2; URL=', 'g'), self.client.link.consulta)),
+                                        method: "GET",
+                                        jar: self.client.cookieJar
+                                    },
+                                    function(error, response, body) {
+                                        if(!error){
+                                            $ = cheerio.load(body);
+                                            pdfLink = $('iframe').attr('src');
+                                            callback();
+                                        }else{
+                                            callback(error);
+                                        }
+                                    }
+                                );
+                            },
+                            function(error){
+                                if(!error){
+                                    pdf.url = pdfLink;
+                                    callback(null, pdf);
+                                }else{
+                                    callback(error);
+                                }
+                            }
+                        );
                     }else{
-                        callback(error);
+                        console.log('Pdf Invalido');
+                        var unavailable = body.indexOf('Este arquivo nao esta disponivel na Internet.') !== -1;
+
+                        if(unavailable){
+                            pdf.status = false;
+                            pdf.url = 'Este arquivo nao esta disponivel na Internet.';
+                            callback(null, pdf);
+                        }else{
+                            console.log(pdf);
+                            console.log(body);
+                            callback(new Error('Invalid Pdf Link'));
+                        }
                     }
                 }
-            );
-        },
-        function(error){
-            if(!error){
-                callback(null, pieceUrl);
             }else{
                 callback(error);
             }
@@ -280,6 +334,16 @@ Controller.prototype.requestProcessInfo = function requestProcessInfo(processNum
                 );
             },
             function(response, body, callback){
+                request(
+                    {
+                        url: url.parse(self.client.link.processInfo),
+                        method: "GET",
+                        jar: self.client.cookieJar
+                    },
+                    callback
+                );
+            },
+            function(response, body, callback){
                     $ = cheerio.load(body);
                 var processCode = $('#Procs').children('option').val();
                 var query = {
@@ -300,62 +364,40 @@ Controller.prototype.requestProcessInfo = function requestProcessInfo(processNum
                         jar: self.client.cookieJar
                     },
                     callback);
-            }
-        ],
-        function(error, piecesURL){
-
-        }
-    );
-
-    request({
-            url: host,
-            method: "GET",
-            jar: self.client.cookieJar
-        },
-        function(error, response, body) {
-            if (!error) {
-                request({
-                        url: url.parse(self.client.link.processInfo),
-                        method: "GET",
-                        jar: self.client.cookieJar
-                    },
-                    function(error, response, body) {
-                        if (!error) {
-                            var $ = cheerio.load(body);
-                            var processCode = $('#Procs').children('option').val();
-
-                            var query = {
-                                NumProc: '',
-                                CodDoc: processCode,
-                                CodUsuWeb: 260,
-                                CodMotiv: 123,
-                                Confir: 'true'
-                            };
-
-                            basicFunc.makeQuery(query, function(error, query) {
-                                request({
-                                        url: url.parse(self.client.link.processPieces + query),
-                                        method: "GET",
-                                        jar: self.client.cookieJar
-                                    },
-                                    function (error, response, body) {
-                                        var $ = cheerio.load(body);
-                                        $('.link-under').each(
-                                            function (i, elem) {
-                                                elem = $(this);
-                                                console.log(elem.text());
-                                                var host = url.parse(eval('self._' + elem.attr('href').replace(new RegExp('javascript:', 'g'), "")));
-                                            }
-                                        );
-                                    }
-                                );
-                            });
-                        } else {
-                            callback(error);
+            },
+            function (response, body, callback) {
+                var arr = [];
+                $ = cheerio.load(body);
+                $('.link-under').each(
+                    function (i, elem) {
+                        elem = $(elem);
+                        var href = elem.attr('href');
+                        var pieceName = elem.text();
+                        if(href){
+                            var pdf = eval('self._' + href.replace(new RegExp('javascript:', 'g'), "")); //eval is here because i am lazy and dont want to parse the javascript function call string
+                                pdf.nome = pieceName;
+                            arr.push(pdf);
+                        }else{
+                            callback(new Error('Invalid .link-under class'));
                         }
                     }
                 );
-            } else {
+                callback(null, arr);
+            },
+            function(arr, callback){
+                async.map(
+                    arr,
+                    function(url, callback){
+                        self.requestPiece(url, callback);
+                    },
+                    callback
+                );
+            }
+        ],
+        function(error, piecesURL){
+            if(!error){
+                callback(null, piecesURL);
+            }else{
                 callback(error);
             }
         }
