@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+    <head lang="PT-BR">
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="height=device-height, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>Apollo System</title>
+
+        <link href="css/lib/bootstrap.min.css" rel="stylesheet">
+        <link href="css/lib/ripples.min.css" rel="stylesheet">
+        <link href="css/lib/material-wfont.min.css" rel="stylesheet">
+        <link href="css/style.css" rel="stylesheet">
+    </head>
+    <body>
+        <div id="loginDialog" class="modal fade" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Login</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="progressLogin" class="progress progress-striped active collapse">
+                            <div class="progress-bar" style="width: 100%"></div>
+                        </div>
+                        <div id="loginError" class="alert alert-dismissable alert-danger collapse">
+                            <button type="button" class="close" data-toggle="collapse" data-target="#loginError">×
+                            </button>
+                            <strong>Atenção:</strong>   <br/>
+                            Seu E-Mail ou Senha estão incorretos.
+                        </div>
+                        <form class="form-horizontal">
+                            <fieldset>
+                                <div class="form-group">
+                                    <label for="login" class="col-lg-2 control-label">Usuário</label>
+                                    <div class="col-lg-10">
+                                        <input id="login" class="form-control empty" type="text" placeholder="Usuário"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="password" class="col-lg-2 control-label">Senha</label>
+                                    <div class="col-lg-10">
+                                        <input id="password" class="form-control empty" type="password" placeholder="Senha"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-lg-10 col-lg-offset-2">
+                                        <button id='loginButton' type="button" class="btn btn-primary">Entrar</button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="intimationForm" class="modal fade" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Pesquisar Intimações</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="intimationError" class="alert alert-dismissable alert-danger collapse">
+                            <button type="button" class="close" data-toggle="collapse" data-target="#intimationError">×
+                            </button>
+                            <strong>Atenção:</strong>   <br/>
+                            Sua Pesquisa Não Retornou Nenhuma Intimação.
+                        </div>
+                        <form class="form-horizontal">
+                            <fieldset>
+                                <div class="form-group">
+                                    <label class="col-lg-12 text-center">Data da
+                                        Intimação</label>
+                                    <label for='initialDateDay' class="col-lg-4 text-center">
+                                        Dia</label>
+                                    <label for='initialDateMonth' class="col-lg-4 text-center">
+                                        Mês</label>
+                                    <label for='initialDateYear' class="col-lg-4 text-center">
+                                        Ano</label>
+                                    <div class="col-lg-4">
+                                        <select id="initialDateDay" multiple="" class="form-control text-center">
+                                            <option value="01">1</option>
+                                            <option value="02">2</option>
+                                            <option value="03">3</option>
+                                            <option value="04">4</option>
+                                            <option value="05">5</option>
+                                            <option value="06">6</option>
+                                            <option value="07">7</option>
+                                            <option value="08">8</option>
+                                            <option value="09">9</option>
+                                            <option value="10">10</option>
+                                            <option value="11">11</option>
+                                            <option value="12">12</option>
+                                            <option value="13">13</option>
+                                            <option value="14">14</option>
+                                            <option value="15">15</option>
+                                            <option value="16">16</option>
+                                            <option value="17">17</option>
+                                            <option value="18">18</option>
+                                            <option value="19">19</option>
+                                            <option value="20">20</option>
+                                            <option value="21">21</option>
+                                            <option value="22">22</option>
+                                            <option value="23">23</option>
+                                            <option value="24">24</option>
+                                            <option value="25">25</option>
+                                            <option value="26">26</option>
+                                            <option value="27">27</option>
+                                            <option value="28">28</option>
+                                            <option value="29">29</option>
+                                            <option value="30">30</option>
+                                            <option value="31">31</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <select id="initialDateMonth" multiple="" class="form-control text-center">
+                                            <option value="01">Jan</option>
+                                            <option value="02">Fev</option>
+                                            <option value="03">Mar</option>
+                                            <option value="04">Abr</option>
+                                            <option value="05">Maio</option>
+                                            <option value="06">Jun</option>
+                                            <option value="07">Jul</option>
+                                            <option value="08">Ago</option>
+                                            <option value="09">Set</option>
+                                            <option value="10">Out</option>
+                                            <option value="11">Nov</option>
+                                            <option value="12">Dez</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <select id="initialDateYear" multiple="" class="form-control, text-center"></select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-lg-10">
+                                        <button id='queryInt' type="button"
+                                                class="btn btn-primary">Pesquisar
+                                        </button>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-panel shadow-z-2">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-xs-3 withripple">
+                        <h1>Processos</h1>
+                    </div>
+                    <div class="col-xs-6 withripple">
+                        <h1>Documento</h1>
+                    </div>
+                    <div class="col-xs-3 withripple">
+                        <h1>Peças</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-fluid main">
+            <div class="wrapper">
+                <div class="row main_row">
+                    <nav class="col-xs-3 menu processos">
+                        <ul>
+                        </ul>
+                    </nav>
+
+                    <div class="col-xs-6 documento shadow-z-1">
+                        <iframe class="pdf" src="http://www.education.gov.yk.ca/pdf/pdf-test.pdf"
+                                frameborder="0"></iframe>
+                    </div>
+
+                    <nav class="col-xs-3 menu pecas">
+                        <ul>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                            <li class="withripple">teste</li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/lib/jquery-2.1.3.min.js"></script>
+        <script src="js/lib/spin.min.js"></script>
+        <script src="js/lib/jquery.spin.js"></script>
+        <script src="js/lib/arrive-2.0.0.min.js"></script>
+        <script src="js/lib/bootstrap.min.js"></script>
+        <script src="js/lib/ripples.min.js"></script>
+        <script src="js/lib/material.min.js"></script>
+        <script src="js/lib/socket.io-1.2.1.js"></script>
+        <script src="js/lib/async.js"></script>
+        <script src="js/script.js"></script>
+    </body>
+</html>

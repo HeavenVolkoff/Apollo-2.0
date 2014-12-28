@@ -5,7 +5,7 @@
 var async = require('async');
 var Client = require('./Client');
 var basicFunc = require('./basicFunction');
-var request = require("request");
+var request = require("request").defaults({encoding: 'binary'});
 var url = require('url');
 var parseString = require('xml2js').parseString;
 var cheerio = require('cheerio');
@@ -41,48 +41,53 @@ Controller.prototype.login = function apolloLogin(callback){
     var self = this;
     var host = url.parse(self.client.link.login);
 
-    request(
-        {
-            url: host,
-            method: "GET",
-            jar: self.client.cookieJar
-        },
-        function(error) {
-            if(!error) {
+    async.waterfall(
+        [
+            function(callback){
                 request(
                     {
                         url: host,
-                        method: 'POST',
-                        gzip: true,
-                        followAllRedirects: true,
-                        jar: self.client.cookieJar,
-                        form: {
-                            Login: self.client.username,
-                            Ident: self.client.password,
-                            OK: '  OK  '
-                        }
-                    }, function (error, response, body) {
-                        if (!error) {
-                            if(response.statusCode < 400) {
-                                self.client.connected = true;
-                                callback(null, {
-                                    url: host,
-                                    gzip: true,
-                                    followAllRedirects: true,
-                                    jar: self.client.cookieJar
-                                });
-                            }else{
-                                callback(new Error('Html request error: ' + response.statusCode));
-                            }
-                        } else {
-                            callback(error);
-                        }
-                    }
+                        method: "GET",
+                        jar: self.client.cookieJar
+                    },
+                    callback
                 );
-            }else{
-                callback(error);
+            },
+            function(response, body, callback){
+                if(response.statusCode < 400) {
+                    request(
+                        {
+                            url: host,
+                            method: 'POST',
+                            gzip: true,
+                            followAllRedirects: true,
+                            jar: self.client.cookieJar,
+                            form: {
+                                Login: self.client.username,
+                                Ident: self.client.password,
+                                OK: '  OK  '
+                            }
+                        },
+                        callback
+                    );
+                }else{
+                    callback(new Error('Html request error: ' + response.statusCode));
+                }
+            },
+            function(response, body, callback){
+                if(response.statusCode < 400) {
+                    if(body.indexOf('Atenção: É obrigatório o preenchimento dos campos Login e Senha.') !== -1 || body.indexOf('Atenção: Login ou Senha inválidos.') !== -1){
+                        callback(null, false);
+                    }else{
+                        self.client.connected = true;
+                        callback(null, true);
+                    }
+                }else{
+                    callback(new Error('Html request error: ' + response.statusCode));
+                }
             }
-        }
+        ],
+        callback
     );
 };
 
@@ -112,7 +117,7 @@ Controller.prototype.intimationURL = function makeIntimationURL(initialDate, fin
     };
 
     var query = {
-        X:      'C',                                                                        //Constante
+        //X:      'C',                                                                        //Constante
         DI:     basicFunc.dateString(initialDate),                                          //Data Inicial da Intimacao
         DF:     basicFunc.dateString(finalDate),                                            //Data Final da Intimacao
         DIP:    basicFunc.dateString(initialValDate),                                       //Vencimento Inicial do Prazo
@@ -173,9 +178,13 @@ Controller.prototype.requestIntimation = function requestIntimationXML(requestOb
                 },
                 function(error, response, body) {
                     if (!error) {
+                        if(body.indexOf('Arguments are of the wrong type, are out of acceptable range, or are in conflict with one another.') !== -1){
+                            callback(null, null);
+                            return;
+                        }
                         parseString(body, function (error, result) {
                             if(!error){
-                                callback(null, result);
+                                callback(null, result.ROWSET.ROW); //TODO: this will always be right but is not the best way to do it
                             }else{
                                 callback(error);
                             }
@@ -215,12 +224,16 @@ Controller.prototype._MostraPeca = function _MostraPeca( P1, P2, P3, DTI, NPI, N
 Controller.prototype.requestPiece = function requestPiece(pdf, callback){
     "use strict";
 
+    if(!this.client.connected){
+        callback(new Error('Not Logged In'));
+        return;
+    }
+
     var self = this;
     var $ = null;
-    var host = url.parse(pdf.url);
 
     request({
-            url: host,
+            url: url.parse(pdf.url),
             method: "GET",
             jar: self.client.cookieJar
         },

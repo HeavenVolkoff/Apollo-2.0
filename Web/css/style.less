@@ -1,0 +1,120 @@
+@import "../less/_colors.less";
+
+//======= MIXINS =======
+.transition(){
+  -webkit-transition: all 0.5s ease;
+  -moz-transition: all 0.5s ease;
+  -o-transition: all 0.5s ease;
+  transition: all 0.5s ease;
+  -webkit-transform: translateZ(0);
+}
+
+//======================
+
+html{
+  height: 100%;
+  width: 100%;
+}
+
+body{
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.progress.active .progress-bar, .progress-bar.active {
+  animation: 0.5s linear 0s normal none infinite running progress-bar-stripes;
+}
+
+#loginDialog > .modal-dialog, #intimationForm > .modal-dialog{
+  margin: 0 auto;
+}
+
+.main{
+  height: 100%;
+  margin-top: -70px;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding-top: 70px;
+  .transition;
+}
+
+.wrapper{
+  height: 100%;
+  width: 100%;
+}
+
+.main_row{
+  height: 100%;
+}
+
+.header-panel{
+  position: relative;
+  background-color: @teal-800;
+  color: @grey-50;
+  text-align: center;
+  z-index: 3;
+
+  h1{
+    cursor: default;
+  }
+}
+
+.menu{
+  height: 100%;
+  overflow: auto;
+  padding: 0;
+  background-color: @grey-300;
+
+  *{
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+  ul{
+    padding: 0;
+    margin: 7px 0;
+
+    li{
+      list-style: none;
+      padding: 20px 0 20px 50px;
+      font-size: 15px;
+      font-weight: normal;
+      cursor: pointer;
+
+      a{
+        color: rgb(51, 51, 51);
+        text-decoration: none;
+      }
+    }
+
+    li.active{
+      background-color: @grey-400;
+      position: relative;
+    }
+  }
+}
+
+.documento{
+  height: 100%;
+  padding: 0;
+  z-index: 2;
+
+  .pdf{
+    height: 100%;
+    width: 100%;
+  }
+}
+
+#initialDateYear{
+  height: 85px;
+  padding: 0;
+  float: none;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid #757575;
+  width: 100%;
+}
