@@ -5,10 +5,13 @@
 var async = require('async');
 var Client = require('./Client');
 var basicFunc = require('./basicFunction');
-var request = require("request").defaults({encoding: 'binary'});
+var request = require("request").defaults({encoding: 'iso-8859-1'});
 var url = require('url');
 var parseString = require('xml2js').parseString;
 var cheerio = require('cheerio');
+var iconv = require('iconv-lite');
+
+iconv.extendNodeEncodings();
 
 module.exports = Controller;
 
@@ -174,17 +177,20 @@ Controller.prototype.requestIntimation = function requestIntimationXML(requestOb
             request({
                     url: host,
                     method: "GET",
+                    encoding: null,
                     jar: self.client.cookieJar
                 },
                 function(error, response, body) {
                     if (!error) {
+                        body = iconv.decode(body, 'utf-8');
                         if(body.indexOf('Arguments are of the wrong type, are out of acceptable range, or are in conflict with one another.') !== -1){
                             callback(null, null);
                             return;
                         }
-                        parseString(body, function (error, result) {
+                        console.log(body);
+                        parseString(body, {encoding: 'utf8', trim: true, explicitArray: false, async: true, normalizeTags: true}, function (error, result) {
                             if(!error){
-                                callback(null, result.ROWSET.ROW); //TODO: this will always be right but is not the best way to do it
+                                callback(null, result.rowset.row); //TODO: this will probably always be right but is not the best way to do it
                             }else{
                                 callback(error);
                             }

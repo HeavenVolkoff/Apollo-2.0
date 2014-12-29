@@ -2,10 +2,14 @@
  * Created by HeavenVolkoff on 12/27/14.
  */
 function daysInMonth(month, year) {
+	"use strict";
+
 	return new Date(year, month, 0).getDate();
 }
 
 function selectOption(element, i) {
+	"use strict";
+
 	return $(element + ' option[value="' + i + '"]');
 }
 
@@ -46,6 +50,8 @@ function appendDOM(initial, array, callback){
 						$.fn.append.call(DOM, item);
 						callback();
 					}
+				}else{
+					callback(new Error('Jquery is required'));
 				}
 			},
 			function(error){
@@ -60,9 +66,11 @@ function appendDOM(initial, array, callback){
 }
 
 (function(){
+	'use strict';
 	var client = io.connect('localhost:1969');
-	client.busy = false;
-	client.logged = false;
+		client.busy = false;
+		client.logged = false;
+	var today = new Date();
 
 	client.on('errorMessage', function(error){
 		console.log('Error: ' + error);
@@ -79,6 +87,15 @@ function appendDOM(initial, array, callback){
 			client.logged = true;
 			$('#loginDialog').modal('hide');
 			$('#intimationForm').modal('show').find('.modal-dialog').css('margin-top', 'calc(50vh - (321px/2))');
+			setTimeout(
+				function(){
+					$('#initialDateMonth').animate({
+						scrollTop: selectOption('#initialDateMonth', today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1).offset().top
+					}, 1000);
+					$('#initialDateDay').animate({
+						scrollTop: selectOption('#initialDateDay', today.getDate() < 10? '0' + today.getDate() : today.getDate()).offset().top
+					}, 1000);
+				}, 50);
 		}else{
 			$('#loginError').collapse('show');
 		}
@@ -92,8 +109,26 @@ function appendDOM(initial, array, callback){
 					/*
 					 */
 					console.log(item);
-					if(item.hasOwnProperty('NUMPROCCOMPLANT')){
-						callback(null, $('<li>').addClass('withripple').text(item.NUMPROCCOMPLANT[0]));
+					if(item.hasOwnProperty('numproccomplant')){
+						var text = Array.isArray(item.txt)? item.txt[0] : item.txt;
+						console.log(text);
+						callback(null,
+							$('<li>')
+								.data(
+									{
+										numero: item.numproccompl,
+										numeroAnt: item.numproccomplant,
+										texto: text.replace(/\n/g, "<br />"),
+										dataAutuacao: item.dtautua,
+										descricao: item.descr,
+										dataIntimacao: item.dtindcit,
+										valor: item.valcausa,
+										autor: item.nome[1],
+										reu: item.nome[0],
+										prazoFinal: item.dtfimindcit,
+									})
+								.addClass('withripple')
+								.text(Array.isArray(item.numproccomplant)? item.numproccomplant[0] : item.numproccomplant));
 					}else{
 						callback(new Error('Error with Process Number'));
 					}
@@ -103,23 +138,37 @@ function appendDOM(initial, array, callback){
 						console.log(array);
 						appendDOM($('.processos ul'), array, function(error){
 							if(!error){
-								$(".processos li").click(function() {
+								$('.processos li').click(function() {
+									var self = $(this);
+									console.log($(this).data('text'));
 									// Menu
-									if ($(this).is(".active")) return;
-									$(".processos li").not($(this)).removeClass("active");
-									$(this).addClass("active");
+									if (self.is(".active")) return;
+
+									$('.processos li').not(self).removeClass("active");
+									self.addClass("active");
+									$('.preview').siblings().remove();
+									$('#numero').text(self.data('numero'));
+									$('#numeroAnt').text(self.data('numeroAnt'));
+									$('#dataAutuacao').text(self.data('dataAutuacao'));
+									$('#descricao').text(self.data('descricao'));
+									$('#autor').text(self.data('autor'));
+									$('#reu').text(self.data('reu'));
+									$('#valor').text('R$' + (self.data('valor').indexOf(',') !== -1? self.data('valor') : self.data('valor') + ',00'));
+									$('#texto').empty();
+									$('#texto').append(self.data('texto'));
+									$('.preview').collapse('show');
 								});
 							}else{
 								throw error;
 							}
-						})
+						});
 					}else{
 						throw error;
 					}
 				}
 			);
 		}else{
-			setInterval(function(){
+			setTimeout(function(){
 				$('#intimationError').collapse('show');
 			}, 100);
 		}
@@ -145,7 +194,6 @@ function appendDOM(initial, array, callback){
 	$(document).ready(function() {
 		$.material.init();
 
-		var today = new Date();
 		var years = today.getFullYear();
 		var yearArr = [];
 
@@ -163,7 +211,8 @@ function appendDOM(initial, array, callback){
 					if(!error){
 						$.material.input('#initialDateYear');
 						$("#initialDateYear").val(today.getFullYear());
-						$("#initialDateMonth").val(today.getMonth() < 10? '0' + today.getMonth() : today.getMonth());
+						$("#initialDateMonth").val(today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1);
+
 
 						for(var days = daysInMonth(today.getMonth(), today.getFullYear()), day = 31; day > days; day--){
 							selectOption('#initialDateDay', day).hide();
@@ -173,7 +222,7 @@ function appendDOM(initial, array, callback){
 					}else{
 						throw error;
 					}
-				})
+				});
 			}
 		);
 
@@ -229,7 +278,7 @@ function appendDOM(initial, array, callback){
 				finalDate: day + month + year,
 				assort: 'varaJuizado',
 				userOnly: true
-			})
+			});
 		});
 	});
 })();
