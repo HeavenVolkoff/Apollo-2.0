@@ -376,19 +376,19 @@ function appendDOM(initial, array, callback){
 						$.material.input('#initialDateYear');
 						$("#initialDateYear").val(today.getFullYear());
 						$("#initialDateMonth")
-							.val(today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1)
-							.find('option').click(function(){
+							.val(today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1).click(function(){
 								var self = $(this);
+								var selected = self.find('option[value="'+ self.val() +'"]');
 								var dayOption = daySelect.find('option');
 
-								if(self.is('.active')){
+								if(selected.is('.active')){
 									return
 								}
 
-								self.addClass('active');
-								$("#initialDateMonth").find('option').not(self).removeClass("active");
+								selected.addClass('active');
+								$("#initialDateMonth").find('option').not(selected).removeClass("active");
 
-								for(var days = daysInMonth(Number(self.val()) ,today.getFullYear()), day = 1; day <= 31; day++){
+								for(var days = daysInMonth(Number(selected.val()) ,today.getFullYear()), day = 1; day <= 31; day++){
 									var option = selectOption('#initialDateDay', day < 10? '0' + day : day);
 									if(!option.length && day <= days){
 										daySelect.append($('<option>').val(day < 10? '0' + day : day).text(day));
@@ -406,30 +406,19 @@ function appendDOM(initial, array, callback){
 										scrollTop: daySelect.scrollTop() + (optionOffsetTop - daySelect.offset().top)
 									}, 500)
 								}
-
-								dayOption.off();
-								dayOption.click(function(){
-									var self = $(this);
-
-									if(self.is('.active')){
-										return
-									}
-
-									self.addClass('active');
-									$("#initialDateDay").find('option').not(self).removeClass("active");
-								});
 							});
 
 						daySelect.val(today.getDate());
-						daySelect.find('option').click(function(){
+						daySelect.click(function(){
 							var self = $(this);
+							var selected = self.find('option[value="'+ self.val() +'"]');
 
-							if(self.is('.active')){
+							if(selected.is('.active')){
 								return
 							}
 
-							self.addClass('active');
-							$("#initialDateDay").find('option').not(self).removeClass("active");
+							selected.addClass('active');
+							$("#initialDateDay").find('option').not(selected).removeClass("active");
 						});
 					}else{
 						throw error;
