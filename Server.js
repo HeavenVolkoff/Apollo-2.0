@@ -28,7 +28,7 @@ io.on('connection',
 				socket.apolloClient.controller.login(function(error, login){
 					if(!error){
 						console.log('Client ' + socket.id + ' logged in');
-						socket.emit('connected', login);
+						socket.emit('login', login);
 					}else{
 						console.log('Client ' + socket.id + ' Attempt failed');
 						socket.emit('error', error);

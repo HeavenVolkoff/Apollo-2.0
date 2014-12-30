@@ -216,14 +216,14 @@ Controller.prototype._MostraPeca = function _MostraPeca( P1, P2, P3, DTI, NPI, N
     return{
         status: true,
         url: this.client.link.showFile + 'P1='+P1+'&P2='+P2+'&P3='+P3+'&DTI='+DTI+'&NPI='+NPI+'&NPT='+NPT+'&TI='+TI+'&NV='+NV,
-        P1: P1,
-        P2: P2,
-        P3: P3,
-        DTI: DTI,
-        NPI: NPI,
-        NPT: NPT,
-        TI: TI,
-        NV: NV
+        p1: P1,
+        p2: P2,
+        p3: P3,
+        dti: DTI,
+        npi: NPI,
+        npt: NPT,
+        ti: TI,
+        nv: NV
     };
 };
 
