@@ -41,7 +41,6 @@ io.on('connection',
 
 		socket.on('requestIntimation', function(requestObj){
 			console.log('Client ' + socket.id + ' request Intimation');
-			console.log(requestObj);
 			socket.apolloClient.controller.requestIntimation(requestObj,
 				function(error, xml){
 					if(!error){
@@ -55,9 +54,11 @@ io.on('connection',
 		});
 
 		socket.on('requestProcessInfo', function(processNumber){
+			console.log('Client ' + socket.id + ' request Process Info');
 			socket.apolloClient.controller.requestProcessInfo(processNumber,
 				function(error, links){
 					if(!error){
+						console.log('Client ' + socket.id + ' get Process Info');
 						socket.emit('processInfo', links);
 					}else{
 						socket.emit('error', error);

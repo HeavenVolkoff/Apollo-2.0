@@ -5,6 +5,16 @@ String.prototype.capitalize = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 };
 
+function optionOffset($option) {
+	//Magic Numbers Everywhere
+	var i = $option.index();
+	var h = Number($option.css('font-size').replace(/px/, '')) + 3; // Cannot get the height of the option element :(
+	var $select = $option.parent();
+	var offset = $select.offset();
+	offset.top += i*h - $select.scrollTop() - 67; //Fix Bug in Safari
+	return offset;
+}
+
 function daysInMonth(month, year) {
 	"use strict";
 
@@ -144,7 +154,10 @@ function appendDOM(initial, array, callback){
 
 	client.on('login', function(connected){
 		var button = $('#loginButton');
-		$('#progressLogin').collapse('hide');
+		setTimeout(function(){
+			$('#progressLogin').collapse('hide');
+			button.attr('disabled', false);
+		}, 100);
 		button.text('Entrar');
 		button.spin(false);
 
@@ -158,14 +171,23 @@ function appendDOM(initial, array, callback){
 			heightWatch(modal, modal.height());
 			setTimeout(
 				function(){
-					$('#initialDateMonth').animate({
-						scrollTop: selectOption('#initialDateMonth', today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1).offset().top
+					var dateSelect = $('#initialDateMonth');
+					var daySelect = $('#initialDateDay');
+
+					var optionOffsetTop = selectOption('#initialDateMonth', today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1).offset().top;
+						optionOffsetTop = optionOffsetTop && !isNaN(optionOffsetTop)? optionOffsetTop : optionOffset(selectOption('#initialDateMonth', today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1)).top;
+
+					dateSelect.animate({
+						scrollTop: dateSelect.scrollTop() + (optionOffsetTop - dateSelect.offset().top)
 					}, 1000);
-					$('#initialDateDay').animate({
-						scrollTop: selectOption('#initialDateDay', today.getDate() < 10? '0' + today.getDate() : today.getDate()).offset().top
+
+					optionOffsetTop = selectOption('#initialDateDay', today.getDate() < 10? '0' + today.getDate() : today.getDate()).offset().top;
+					optionOffsetTop = optionOffsetTop && !isNaN(optionOffsetTop)? optionOffsetTop : optionOffset(selectOption('#initialDateDay', today.getDate() < 10? '0' + today.getDate() : today.getDate())).top;
+
+					daySelect.animate({
+						scrollTop: daySelect.scrollTop() + (optionOffsetTop - daySelect.offset().top)
 					}, 1000);
-					button.attr('disabled', false);
-				}, 500);
+				}, 250);
 		}else{
 			$('#loginError').collapse('show');
 			button.attr('disabled', false);
@@ -176,9 +198,11 @@ function appendDOM(initial, array, callback){
 		var button = $('#queryInt');
 		setTimeout(function(){
 			$('#progressIntimation').collapse('hide');
+			button.attr('disabled', false);
 		}, 100);
-		button.text('Entrar');
+		button.text('Pesquisar');
 		button.spin(false);
+
 		if(Array.isArray(intimations)){
 			$('#intimationForm').modal('hide');
 			async.map(intimations,
@@ -213,9 +237,11 @@ function appendDOM(initial, array, callback){
 				},
 				function(error, array){
 					if(!error){
-						appendDOM($('.processos ul'), array, function(error){
+						var processos = $('.processos');
+						appendDOM(processos.find('ul'), array, function(error){
 							if(!error){
-								var li = $('.processos li');
+								var li = processos.find('li');
+								li.off();
 								li.click(function() {
 									var self = $(this);
 									// Menu
@@ -235,6 +261,7 @@ function appendDOM(initial, array, callback){
 									$('#valor').text(fixCurrency(self.data('valor')));
 									$('#texto').empty().append(self.data('texto'));
 									$('.preview').collapse('show').siblings().remove();
+									$('.pecas ul').empty();
 
 									client.emit('requestProcessInfo', self.data('numero'));
 									self.find('.spin').spin({
@@ -266,7 +293,6 @@ function appendDOM(initial, array, callback){
 		$('.processos li').find('.spin').spin(false);
 		async.map(pdfLinks,
 			function(item, callback){
-				console.log(item);
 
 				appendDOM($('<li>')
 						.data(
@@ -290,22 +316,32 @@ function appendDOM(initial, array, callback){
 			},
 			function(error, array){
 				if(!error){
-					appendDOM($('.pecas ul'), array, function(error){
+					var pecas = $('.pecas');
+
+					appendDOM(pecas.find('ul'), array, function(error){
 						if(!error){
-							var li = $('.pecas li');
+							var li = pecas.find('li');
+							li.off();
 							li.click(function(){
 								var self = $(this);
+								var preview = $('.preview');
 								// Menu
 								if (self.is(".active")){
-									return;
+									$('#peca_'+self.data('index')).remove();
+									preview.collapse('show');
+									self.removeClass("active");
+									return
 								}
 
 								li.not(self).removeClass("active");
 								self.addClass("active");
 
-								$('.preview').collapse('hide').siblings().remove();
+								preview.collapse('hide').siblings().remove();
 								if(self.data('status')){
-									$('#document').append($('<object>').addClass('pdf').attr({id: 'peca_'+self.data('index'), data: self.data('url'), type: "application/pdf"}).append($('<embed>').attr({src: self.data('url'), type: "application/pdf"})));
+									$('#document').append($('<iframe>').addClass('collapse').attr({src: self.data('url')}));
+									setTimeout(function(){
+										$('#document').append($('<object>').addClass('pdf').attr({id: 'peca_'+self.data('index'), data: self.data('url'), type: "application/pdf"}).append($('<embed>').addClass('pdf').attr({src: self.data('url'), type: "application/pdf"})));
+									}, 200);
 								}
 							});
 						}
@@ -335,16 +371,66 @@ function appendDOM(initial, array, callback){
 			function(err){
 				appendDOM($('#initialDateYear'), yearArr, function(error, DOM){
 					if(!error){
+						var daySelect = $('#initialDateDay');
+
 						$.material.input('#initialDateYear');
 						$("#initialDateYear").val(today.getFullYear());
-						$("#initialDateMonth").val(today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1);
+						$("#initialDateMonth")
+							.val(today.getMonth()+1 < 10? '0' + today.getMonth()+1 : today.getMonth()+1)
+							.find('option').click(function(){
+								var self = $(this);
+								var dayOption = daySelect.find('option');
 
+								if(self.is('.active')){
+									return
+								}
 
-						for(var days = daysInMonth(today.getMonth(), today.getFullYear()), day = 31; day > days; day--){
-							selectOption('#initialDateDay', day).hide();
-						}
+								self.addClass('active');
+								$("#initialDateMonth").find('option').not(self).removeClass("active");
 
-						$("#initialDateDay").val(today.getDate());
+								for(var days = daysInMonth(Number(self.val()) ,today.getFullYear()), day = 1; day <= 31; day++){
+									var option = selectOption('#initialDateDay', day < 10? '0' + day : day);
+									if(!option.length && day <= days){
+										daySelect.append($('<option>').val(day < 10? '0' + day : day).text(day));
+									}else if(day > days && option.length){
+										option.remove();
+									}
+								}
+
+								if(!daySelect.find('.active').length){
+									var optionOffsetTop = selectOption('#initialDateDay', days < 10? '0' + days : days).offset().top;
+									optionOffsetTop = optionOffsetTop && !isNaN(optionOffsetTop)? optionOffsetTop : optionOffset(selectOption('#initialDateDay', days < 10? '0' + days : days)).top;
+
+									daySelect.val(days < 10? '0' + days : days);
+									daySelect.animate({
+										scrollTop: daySelect.scrollTop() + (optionOffsetTop - daySelect.offset().top)
+									}, 500)
+								}
+
+								dayOption.off();
+								dayOption.click(function(){
+									var self = $(this);
+
+									if(self.is('.active')){
+										return
+									}
+
+									self.addClass('active');
+									$("#initialDateDay").find('option').not(self).removeClass("active");
+								});
+							});
+
+						daySelect.val(today.getDate());
+						daySelect.find('option').click(function(){
+							var self = $(this);
+
+							if(self.is('.active')){
+								return
+							}
+
+							self.addClass('active');
+							$("#initialDateDay").find('option').not(self).removeClass("active");
+						});
 					}else{
 						throw error;
 					}
@@ -403,6 +489,7 @@ function appendDOM(initial, array, callback){
 			var width = button.width();
 
 			$('#progressIntimation').collapse('show');
+			button.attr('disabled', true);
 			button.text('');
 			button.height(height);
 			button.width(width);
