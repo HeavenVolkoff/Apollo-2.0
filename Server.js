@@ -13,41 +13,50 @@ io.on('connection',
 	function (socket) {
 		"use strict";
 
-		console.log('user connected ' + socket.id);
-
-		socket.on('error', function(error){
-			throw error;
-			socket.emit('errorMessage', error);
-		});
+		console.log('Client connected ' + socket.id);
+		socket.apolloClient = new Client();
+		(new Controller(socket.apolloClient));
 
 		socket.on('login', function (username, password){
 			console.log('Client ' + socket.id + ' attempt to login');
+
 			if(username && password) {
-				socket.apolloClient = new Client(username, password);
-				var controller = new Controller(socket.apolloClient);
+				if(!socket.apolloClient.connected) {
+					try {
+						socket.apolloClient.credentials(username, password);
+
+					} catch(error){
+						console.log('Client ' + socket.id + ' Attempt failed. Error: ' + error);
+						socket.emit('login', error);
+					}
+				}
+
 				socket.apolloClient.controller.login(function(error, login){
-					if(!error){
+					socket.emit('login', error, login);
+
+					if(!error && login){
 						console.log('Client ' + socket.id + ' logged in');
-						socket.emit('login', login);
 					}else{
-						console.log('Client ' + socket.id + ' Attempt failed');
-						socket.emit('error', error);
+						console.log('Client ' + socket.id + ' Attempt failed. Error: ' + error);
 					}
 				});
 			}else{
-				socket.emit('error', new Error('Missing Login Information'));
+				socket.emit('login', new Error('Missing Login Information'));
+				console.log('Client ' + socket.id + ' Attempt failed. Error: Missing Login Info');
 			}
 		});
 
 		socket.on('requestIntimation', function(requestObj){
 			console.log('Client ' + socket.id + ' request Intimation');
+
 			socket.apolloClient.controller.requestIntimation(requestObj,
 				function(error, xml){
+					socket.emit('intimation', error, xml);
+
 					if(!error){
-						console.log('Client ' + socket.id + ' get Intimation');
-						socket.emit('intimation', xml);
+						console.log('Client ' + socket.id + ' got Intimation');
 					}else{
-						socket.emit('error', error);
+						console.log('Client ' + socket.id + ' Intimation Error: ' + error);
 					}
 				}
 			);
@@ -55,16 +64,32 @@ io.on('connection',
 
 		socket.on('requestProcessInfo', function(processNumber){
 			console.log('Client ' + socket.id + ' request Process Info');
+
 			socket.apolloClient.controller.requestProcessInfo(processNumber,
 				function(error, links){
+					socket.emit('processInfo', error, links);
+
 					if(!error){
-						console.log('Client ' + socket.id + ' get Process Info');
-						socket.emit('processInfo', links);
+						console.log('Client ' + socket.id + ' got Process Info');
 					}else{
-						socket.emit('error', error);
+						console.log('Client ' + socket.id + ' Process Info Error: ' + error);
 					}
 				}
 			);
 		});
+
+		socket.on('requestProcessPiece', function(pieceURL, id){
+			console.log('Client ' + socket.id + ' request Process Piece');
+
+			socket.apolloClient.controller.requestPiece(pieceURL, function(error, pdfLink){
+				socket.emit('processPiece', error, pdfLink, id);
+
+				if(!error){
+					console.log('Client ' + socket.id + ' got Process Piece');
+				}else{
+					console.log('Client ' + socket.id + ' Process Piece Error: ' + error);
+				}
+			});
+		})
 	}
 );

@@ -9,12 +9,16 @@ module.exports = Client;
 function Client(username, password){
     "use strict";
 
-    var self = this;
     var controller = null;
 
-    if(!(basicFunc.notEmpty(username) && basicFunc.notEmpty(password))){
-        throw new Error('Invalid Parameters');
-    }
+    this.credentials = function(user, pass){
+        if(basicFunc.notEmpty(user) && basicFunc.notEmpty(pass) && !(basicFunc.notEmpty(username) && basicFunc.notEmpty(password)) ){
+            username = user;
+            password = pass;
+        }else{
+            throw new Error('Client already has username and password');
+        }
+    };
 
     this.addController = function addController(newController){
         if(!controller && typeof newController === 'object'){
@@ -27,6 +31,10 @@ function Client(username, password){
     };
 
     Object.defineProperties(this, {
+        online: {
+            value: false,
+            writable: true
+        },
         connected: {
             value: false,
             writable: true

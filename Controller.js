@@ -37,6 +37,29 @@ function Controller(client){
     });
 }
 
+Controller.prototype.isOnline = function isOnline(callback){
+    callback = typeof callback === 'function'? callback : function(error){if(error){throw error;}};
+    var self = this;
+    var host = url.parse(self.client.link.login);
+
+    request(
+        {
+            url: host,
+            method: "GET",
+            jar: self.client.cookieJar
+        },
+        function(response, body){
+            if(response.statusCode < 400) {
+                self.client.online = true;
+                callback(true, response.statusCode);
+            }else{
+                self.client.online = false;
+                callback(false, response.statusCode);
+            }
+        }
+    );
+};
+
 Controller.prototype.login = function apolloLogin(callback){
     "use strict";
 
@@ -47,39 +70,32 @@ Controller.prototype.login = function apolloLogin(callback){
     async.waterfall(
         [
             function(callback){
-                request(
-                    {
-                        url: host,
-                        method: "GET",
-                        jar: self.client.cookieJar
-                    },
-                    callback
-                );
-            },
-            function(response, body, callback){
-                if(response.statusCode < 400) {
-                    request(
-                        {
-                            url: host,
-                            method: 'POST',
-                            gzip: true,
-                            followAllRedirects: true,
-                            jar: self.client.cookieJar,
-                            form: {
-                                Login: self.client.username,
-                                Ident: self.client.password,
-                                OK: '  OK  '
-                            }
-                        },
-                        callback
-                    );
-                }else{
-                    callback(new Error('Html request error: ' + response.statusCode));
-                }
+                self.isOnline(function(online, statusCode){
+                    if(online){
+                        request(
+                            {
+                                url: host,
+                                method: 'POST',
+                                gzip: true,
+                                followAllRedirects: true,
+                                jar: self.client.cookieJar,
+                                form: {
+                                    Login: self.client.username,
+                                    Ident: self.client.password,
+                                    OK: '  OK  '
+                                }
+                            },
+                            callback
+                        );
+                    }else{
+                        callback(new Error('Html request error: ' + statusCode));
+                    }
+                })
             },
             function(response, body, callback){
                 if(response.statusCode < 400) {
                     if(body.indexOf('Atenção: É obrigatório o preenchimento dos campos Login e Senha.') !== -1 || body.indexOf('Atenção: Login ou Senha inválidos.') !== -1){
+                        self.client.connected = false;
                         callback(null, false);
                     }else{
                         self.client.connected = true;
@@ -120,7 +136,7 @@ Controller.prototype.intimationURL = function makeIntimationURL(initialDate, fin
     };
 
     var query = {
-        //X:      'C',                                                                        //Constante
+        //X:      'C',                                                                      //Constante
         DI:     basicFunc.dateString(initialDate),                                          //Data Inicial da Intimacao
         DF:     basicFunc.dateString(finalDate),                                            //Data Final da Intimacao
         DIP:    basicFunc.dateString(initialValDate),                                       //Vencimento Inicial do Prazo
@@ -187,7 +203,6 @@ Controller.prototype.requestIntimation = function requestIntimationXML(requestOb
                             callback(null, null);
                             return;
                         }
-                        console.log(body);
                         parseString(body, {encoding: 'utf8', trim: true, explicitArray: false, async: true, normalizeTags: true}, function (error, result) {
                             if(!error){
                                 callback(null, result.rowset.row); //TODO: this will probably always be right but is not the best way to do it
@@ -202,12 +217,6 @@ Controller.prototype.requestIntimation = function requestIntimationXML(requestOb
             );
         }
     );
-};
-
-Controller.prototype.processURL = function makeProcessURL(processNumber){
-    "use strict";
-
-    return this.client.link.process + 'NumProc=' + processNumber.toString();
 };
 
 Controller.prototype._MostraPeca = function _MostraPeca( P1, P2, P3, DTI, NPI, NPT, TI, NV) {
@@ -227,104 +236,10 @@ Controller.prototype._MostraPeca = function _MostraPeca( P1, P2, P3, DTI, NPI, N
     };
 };
 
-Controller.prototype.requestPiece = function requestPiece(pdf, callback){
+Controller.prototype.processURL = function makeProcessURL(processNumber){
     "use strict";
 
-    if(!this.client.connected){
-        callback(new Error('Not Logged In'));
-        return;
-    }
-
-    var self = this;
-    var $ = null;
-
-    request({
-            url: url.parse(pdf.url),
-            method: "GET",
-            jar: self.client.cookieJar
-        },
-        function(error, response, body) {
-            if(!error){
-                    $ = cheerio.load(body);
-                var pdfLink = null;
-
-                $('iframe').each(
-                    function(i, elem){
-                        var url = $(elem).attr('src');
-                        if(url){
-                            pdfLink = url;
-                            return false;
-                        }
-                    }
-                );
-
-                if(pdfLink){
-                    pdf.url = pdfLink;
-                    callback(null, pdf);
-                }else{
-                    var link = null;
-
-                    $('meta[http-equiv=Refresh]').each(
-                        function(i, elem){
-                            var url = $(elem).attr('content');
-                            if(url){
-                                link = url;
-                                return false;
-                            }
-                        }
-                    );
-
-                    if(link){
-                        async.whilst(
-                            function(){
-                                return !pdfLink;
-                            },
-                            function(callback){
-                                request({
-                                        url: url.parse(link.replace(new RegExp('2; URL=', 'g'), self.client.link.consulta)),
-                                        method: "GET",
-                                        jar: self.client.cookieJar
-                                    },
-                                    function(error, response, body) {
-                                        if(!error){
-                                            $ = cheerio.load(body);
-                                            pdfLink = $('iframe').attr('src');
-                                            callback();
-                                        }else{
-                                            callback(error);
-                                        }
-                                    }
-                                );
-                            },
-                            function(error){
-                                if(!error){
-                                    pdf.url = pdfLink;
-                                    callback(null, pdf);
-                                }else{
-                                    callback(error);
-                                }
-                            }
-                        );
-                    }else{
-                        console.log('Pdf Invalido');
-                        var unavailable = body.indexOf('Este arquivo nao esta disponivel na Internet.') !== -1;
-
-                        if(unavailable){
-                            pdf.status = false;
-                            pdf.url = 'Este arquivo nao esta disponivel na Internet.';
-                            callback(null, pdf);
-                        }else{
-                            console.log(pdf);
-                            console.log(body);
-                            callback(new Error('Invalid Pdf Link'));
-                        }
-                    }
-                }
-            }else{
-                callback(error);
-            }
-        }
-    );
+    return this.client.link.process + 'NumProc=' + processNumber.toString();
 };
 
 Controller.prototype.requestProcessInfo = function requestProcessInfo(processNumber, callback){
@@ -363,7 +278,7 @@ Controller.prototype.requestProcessInfo = function requestProcessInfo(processNum
                 );
             },
             function(response, body, callback){
-                    $ = cheerio.load(body);
+                $ = cheerio.load(body);
                 var processCode = $('#Procs').children('option').val();
                 var query = {
                     NumProc: '',
@@ -394,7 +309,7 @@ Controller.prototype.requestProcessInfo = function requestProcessInfo(processNum
                         var pieceName = elem.text();
                         if(href){
                             var pdf = eval('self._' + href.replace(new RegExp('javascript:', 'g'), "")); //eval is here because i am lazy and dont want to parse the javascript function call string
-                                pdf.nome = pieceName;
+                            pdf.nome = pieceName;
                             arr.push(pdf);
                         }else{
                             callback(new Error('Invalid .link-under class'));
@@ -402,23 +317,84 @@ Controller.prototype.requestProcessInfo = function requestProcessInfo(processNum
                     }
                 );
                 callback(null, arr);
-            },
-            function(arr, callback){
-                async.map(
-                    arr,
-                    function(url, callback){
-                        self.requestPiece(url, callback);
-                    },
-                    callback
-                );
             }
         ],
-        function(error, piecesURL){
-            if(!error){
-                callback(null, piecesURL);
-            }else{
-                callback(error);
-            }
-        }
+        callback
+    );
+};
+
+Controller.prototype.requestPiece = function requestPiece(host, callback){
+    "use strict";
+
+    if(!this.client.connected){
+        callback(new Error('Not Logged In'));
+        return;
+    }
+
+    var self = this;
+    var $ = null;
+    var pdfLink = null;
+
+    async.whilst(
+        function(){
+            return pdfLink === null;
+        },
+        function(callback){
+            request({
+                url: url.parse(host),
+                method: "GET",
+                jar: self.client.cookieJar
+            },
+            function(error, response, body){
+                if(!error){
+
+                    if(body.indexOf('Este arquivo nao esta disponivel na Internet.') !== -1){
+                        pdfLink = false; //Piece pdf url is unavailable, return;
+                        callback();
+
+                    }else{
+                        $ = cheerio.load(body);
+
+                        $('iframe').each(
+                            function(i, elem){
+                                var url = $(elem).attr('src');
+                                if(url){
+                                    pdfLink = url;
+                                    return false;
+                                }
+                            }
+                        );
+
+                        if(pdfLink){
+                            callback(); // has Piece pdf url, return
+
+                        }else{
+                            var link = null;
+
+                            $('meta[http-equiv=Refresh]').each(
+                                function(i, elem){
+                                    var url = $(elem).attr('content');
+                                    if(url){
+                                        link = url;
+                                        return false;
+                                    }
+                                }
+                            );
+
+                            if(link){
+                                host = link.replace(new RegExp('2; URL=', 'g'), self.client.link.consulta);
+                                callback(); // Piece pdf url moved place, retry;
+                            }else{
+                                callback(new Error('Invalid Pdf Link')); // Doesn't have Piece pdf url or moved link, return error;
+                            }
+                        }
+                    }
+
+                }else{
+                    callback(error);
+                }
+            })
+        },
+        callback
     );
 };

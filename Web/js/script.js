@@ -126,7 +126,8 @@ function appendDOM(initial, array, callback){
 				}
 			};
 
-			client.removeListener(event, callback).realOn.apply(client, arguments);
+			client.removeListener(event, callback);
+			client.realOn.apply(client, arguments);
 			client.realOn.call(client, event, callback);
 		};
 
@@ -338,9 +339,17 @@ function appendDOM(initial, array, callback){
 
 								preview.collapse('hide').siblings().remove();
 								if(self.data('status')){
-									$('#document').append($('<iframe>').addClass('collapse').attr({src: self.data('url')}));
+									//$('#document').append($('<iframe>').addClass('collapse').attr({src: self.data('url')}));
 									setTimeout(function(){
-										$('#document').append($('<object>').addClass('pdf').attr({id: 'peca_'+self.data('index'), data: self.data('url'), type: "application/pdf"}).append($('<embed>').addClass('pdf').attr({src: self.data('url'), type: "application/pdf"})));
+										$('#document')
+											.append(
+												$('<embed>').addClass('pdf').attr({src: self.data('url'), type: "application/pdf"})
+												//$('<object>').addClass('pdf').attr({id: 'peca_'+self.data('index'), data: self.data('url'), type: "application/pdf", onerror: 'alert("Error")', onemptied: 'alert("Emptied")', onstalled: 'alert("Stalled")', onload:'alert("Load")', typemustmatch: false})
+												//	.append(
+												//		//$('<embed>').addClass('pdf').attr({src: self.data('url'), type: "application/pdf"})
+												//		$('<div>').text('Essa Porra Não Funciona')
+												//	)
+											);
 									}, 200);
 								}
 							});
