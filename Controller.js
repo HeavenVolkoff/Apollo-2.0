@@ -48,14 +48,19 @@ Controller.prototype.isOnline = function isOnline(callback){
             method: "GET",
             jar: self.client.cookieJar
         },
-        function(response, body){
-            if(response.statusCode < 400) {
-                self.client.online = true;
-                callback(true, response.statusCode);
+        function(error, response, body){
+            if(!error){
+                if(response.statusCode < 400) {
+                    self.client.online = true;
+                    callback(null, true, response.statusCode);
+                }else{
+                    self.client.online = false;
+                    callback(null, false, response.statusCode);
+                }
             }else{
-                self.client.online = false;
-                callback(false, response.statusCode);
+                callback(error);
             }
+
         }
     );
 };
@@ -70,25 +75,29 @@ Controller.prototype.login = function apolloLogin(callback){
     async.waterfall(
         [
             function(callback){
-                self.isOnline(function(online, statusCode){
-                    if(online){
-                        request(
-                            {
-                                url: host,
-                                method: 'POST',
-                                gzip: true,
-                                followAllRedirects: true,
-                                jar: self.client.cookieJar,
-                                form: {
-                                    Login: self.client.username,
-                                    Ident: self.client.password,
-                                    OK: '  OK  '
-                                }
-                            },
-                            callback
-                        );
+                self.isOnline(function(error, online, statusCode){
+                    if(!error){
+                        if(online){
+                            request(
+                                {
+                                    url: host,
+                                    method: 'POST',
+                                    gzip: true,
+                                    followAllRedirects: true,
+                                    jar: self.client.cookieJar,
+                                    form: {
+                                        Login: self.client.username,
+                                        Ident: self.client.password,
+                                        OK: '  OK  '
+                                    }
+                                },
+                                callback
+                            );
+                        }else{
+                            callback(new Error('Html request error: ' + statusCode));
+                        }
                     }else{
-                        callback(new Error('Html request error: ' + statusCode));
+                        callback(error);
                     }
                 })
             },

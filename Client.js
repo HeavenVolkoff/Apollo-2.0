@@ -12,11 +12,11 @@ function Client(username, password){
     var controller = null;
 
     this.credentials = function(user, pass){
-        if(basicFunc.notEmpty(user) && basicFunc.notEmpty(pass) && !(basicFunc.notEmpty(username) && basicFunc.notEmpty(password)) ){
+        if(basicFunc.notEmpty(user) && basicFunc.notEmpty(pass) && !this.connected ){
             username = user;
             password = pass;
         }else{
-            throw new Error('Client already has username and password');
+            throw new Error('Client already has a valid username and password');
         }
     };
 

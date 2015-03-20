@@ -26,7 +26,7 @@ io.on('connection',
 						socket.apolloClient.credentials(username, password);
 
 					} catch(error){
-						console.log('Client ' + socket.id + ' Attempt failed. Error: ' + error);
+						console.log('Client ' + socket.id + ' Login Attempt failed. Error: ' + error);
 						socket.emit('login', error);
 					}
 				}
@@ -37,7 +37,7 @@ io.on('connection',
 					if(!error && login){
 						console.log('Client ' + socket.id + ' logged in');
 					}else{
-						console.log('Client ' + socket.id + ' Attempt failed. Error: ' + error);
+						console.log('Client ' + socket.id + ' Login Attempt failed. Login: ' + login + ' Error: ' + error);
 					}
 				});
 			}else{
