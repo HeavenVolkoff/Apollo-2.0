@@ -17,7 +17,7 @@ io.on('connection',
 		socket.apolloClient = new Client();
 		(new Controller(socket.apolloClient));
 
-		socket.on('login', function (username, password){
+		socket.on('requestLogin', function (username, password){
 			console.log('Client ' + socket.id + ' attempt to login');
 
 			if(username && password) {
